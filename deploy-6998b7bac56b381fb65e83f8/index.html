@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>브리 레흐의 구슬 계산기</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --accent: #f97316;
+            --accent-light: #fff7ed;
+            --success: #22c55e;
+            --bg: #f0f4ff;
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #94a3b8;
+            --border: #e2e8f0;
+            --shadow: 0 4px 24px rgba(59,130,246,0.10);
+            --radius: 14px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            padding: 24px 16px 48px;
+            color: var(--text);
+        }
+
+        .page-wrapper {
+            max-width: 620px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ── 헤더 ── */
+        .page-header {
+            text-align: center;
+            padding: 8px 0 4px;
+        }
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .page-header h1 img { width: 30px; height: 30px; object-fit: contain; }
+        .page-header p { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+        /* ── 카드 공통 ── */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--bg);
+        }
+
+        /* ── 입력 폼 ── */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .input-grid .full { grid-column: 1 / -1; }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 5px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color .2s;
+            background: var(--bg);
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+        }
+
+        /* ── 버튼 ── */
+        .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform .1s, opacity .15s;
+        }
+        .btn:active { transform: scale(.97); }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-save { background: var(--success); color: #fff; }
+        .btn-save:hover { background: #16a34a; }
+        .btn-save:disabled { background: var(--muted); cursor: not-allowed; }
+
+        /* ── 현재 계산 결과 ── */
+        #currentResult { display: none; }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 6px 0;
+        }
+        .result-label { font-size: 13px; color: #64748b; }
+        .result-value { font-size: 16px; font-weight: 700; }
+        .result-value.big { font-size: 22px; color: var(--accent); }
+        .divider { border: 0; border-top: 1.5px solid var(--border); margin: 10px 0; }
+        .round-preview {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ── 회차 목록 ── */
+        .round-list { display: flex; flex-direction: column; gap: 10px; }
+        .round-item {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            position: relative;
+            animation: slideIn .25s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .round-badge {
+            background: var(--primary);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .round-info { flex: 1; }
+        .round-info .round-meta {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .round-info .round-totals {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .round-info .round-totals span { color: var(--primary); }
+        .round-del {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #cbd5e1;
+            padding: 0 4px;
+            line-height: 1;
+            transition: color .15s;
+        }
+        .round-del:hover { color: #ef4444; }
+
+        .empty-state {
+            text-align: center;
+            padding: 28px 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+        /* ── 총 정산 ── */
+        .total-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 32px rgba(37,99,235,.35);
+            padding: 24px;
+        }
+        .total-card .card-title { color: rgba(255,255,255,.7); border-color: rgba(255,255,255,.15); }
+        .total-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .total-stat {
+            background: rgba(255,255,255,.12);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .total-stat .ts-label { font-size: 11px; color: rgba(255,255,255,.65); margin-bottom: 4px; }
+        .total-stat .ts-value { font-size: 18px; font-weight: 900; }
+        .total-divider { border: 0; border-top: 1px solid rgba(255,255,255,.2); margin: 14px 0; }
+        .total-per-person {
+            text-align: center;
+        }
+        .total-per-person .label { font-size: 13px; color: rgba(255,255,255,.7); margin-bottom: 4px; }
+        .total-per-person .value {
+            font-size: 36px;
+            font-weight: 900;
+            color: #fbbf24;
+            letter-spacing: -.5px;
+        }
+        .total-per-person .unit { font-size: 18px; font-weight: 500; margin-left: 4px; color: rgba(255,255,255,.8); }
+
+        .btn-clear-all {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 10px;
+            background: rgba(255,255,255,.12);
+            border: 1.5px solid rgba(255,255,255,.25);
+            border-radius: 8px;
+            color: rgba(255,255,255,.8);
+            font-size: 13px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-clear-all:hover { background: rgba(255,0,0,.2); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- 헤더 -->
+    <div class="page-header">
+        <h1><img src="assets/item-36398.png" alt="구슬"> 브리 레흐의 구슬 계산기</h1>
+        <p>by 류트서버 므세 with Claude Agent</p>
+    </div>
+
+    <!-- ① 입력 카드 -->
+    <div class="card">
+        <div class="card-title">📥 이번 릴 결과 입력</div>
+        <div class="input-grid">
+            <div class="input-group">
+                <label>1관 페타크 / 구슬 등장 횟수</label>
+                <input type="number" id="count1" placeholder="예: 4" min="0">
+            </div>
+            <div class="input-group">
+                <label>2관 브론타나스 / 구슬 등장 횟수</label>
+                <input type="number" id="count2" placeholder="예: 5" min="0">
+            </div>
+            <div class="input-group">
+                <label>3관 레넨의 미이르 / 구슬 등장 횟수</label>
+                <input type="number" id="count3" placeholder="예: 3" min="0">
+            </div>
+            <div class="input-group">
+                <label>구슬 1개당 가격 (숲)</label>
+                <input type="number" id="price" placeholder="예: 45" min="0">
+            </div>
+            <div class="input-group full">
+                <label>파티원 인원수</label>
+                <input type="number" id="partyMembers" placeholder="예: 4" min="1">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="calculate()">🔢 계산하기</button>
+            <button class="btn btn-save" id="saveBtn" onclick="saveRound()" disabled>💾 이번 릴 결과 저장</button>
+        </div>
+    </div>
+
+    <!-- ② 현재 결과 -->
+    <div class="card" id="currentResult">
+        <div class="card-title">📊 현재 계산 결과</div>
+        <div class="round-preview" id="roundPreview"></div>
+        <div class="result-row">
+            <span class="result-label">총 구슬 수</span>
+            <span class="result-value" id="r_totalCount">-</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">총 합계</span>
+            <span class="result-value" id="r_totalPrice">-</span>
+        </div>
+        <hr class="divider">
+        <div class="result-row">
+            <span class="result-label">1인당 배당금</span>
+            <span class="result-value big" id="r_perPerson">-</span>
+        </div>
+    </div>
+
+    <!-- ③ 저장된 회차 목록 -->
+    <div class="card">
+        <div class="card-title">📋 저장된 릴 목록</div>
+        <div class="round-list" id="roundList">
+            <div class="empty-state">
+                <div class="icon">🫧</div>
+                아직 저장된 회차가 없습니다.<br>계산 후 [회차 저장]을 눌러 추가하세요.
+            </div>
+        </div>
+    </div>
+
+    <!-- ④ 누적 총 정산 -->
+    <div class="total-card" id="totalCard">
+        <div class="card-title">🏆 누적 총 정산</div>
+        <div class="total-stat-grid">
+            <div class="total-stat">
+                <div class="ts-label">저장된 릴</div>
+                <div class="ts-value" id="t_rounds">0</div>
+            </div>
+            <div class="total-stat">
+                <div class="ts-label">총 구슬 수</div>
+                <div class="ts-value" id="t_beads">0</div>
+            </div>
+            <div class="total-stat">
+                <div class="ts-label">총 합계 (숲)</div>
+                <div class="ts-value" id="t_total">0</div>
+            </div>
+        </div>
+        <hr class="total-divider">
+        <div class="total-per-person">
+            <div class="label">파티원 <span id="t_members">?</span>명 기준 1인당 배당금</div>
+            <div class="value" id="t_perPerson">0<span class="unit">숲</span></div>
+        </div>
+        <button class="btn-clear-all" onclick="clearAll()">🗑 모든 릴 초기화</button>
+    </div>
+
+</div>
+
+<script>
+    // ─── 상태 ───────────────────────────────────────────────
+    let rounds = JSON.parse(localStorage.getItem('breeRoundData') || '[]');
+    let currentCalc = null;   // 방금 계산한 결과 (미저장)
+
+    function save() {
+        localStorage.setItem('breeRoundData', JSON.stringify(rounds));
+    }
+
+    // ─── 계산 ───────────────────────────────────────────────
+    function calculate() {
+        const c1      = Number(document.getElementById('count1').value) || 0;
+        const c2      = Number(document.getElementById('count2').value) || 0;
+        const c3      = Number(document.getElementById('count3').value) || 0;
+        const price   = Number(document.getElementById('price').value)  || 0;
+        const members = Number(document.getElementById('partyMembers').value);
+
+        if (members <= 0) { alert('파티원 수는 최소 1명 이상이어야 합니다!'); return; }
+        if (price <= 0)   { alert('구슬 가격을 입력해주세요!'); return; }
+
+        const totalCount = (c1 + c2 + c3) * 2;
+        const totalPrice = totalCount * price;
+        const perPerson  = members > 0 ? totalPrice / members : 0;
+
+        currentCalc = { c1, c2, c3, price, members, totalCount, totalPrice, perPerson, ts: Date.now() };
+
+        // 결과 표시
+        document.getElementById('currentResult').style.display = 'block';
+        document.getElementById('roundPreview').innerHTML =
+            `1관(페타크) ${c1}회, 2관(브론타나스) ${c2}회, 3관(레넨의 미이르) ${c3}회<br>` +
+            `총 등장 횟수 ${c1+c2+c3}회 × 2 = <b>${totalCount}개</b>`;
+        document.getElementById('r_totalCount').textContent = totalCount.toLocaleString() + '개';
+        document.getElementById('r_totalPrice').textContent = totalPrice.toLocaleString() + ' 숲';
+        document.getElementById('r_perPerson').textContent  = perPerson.toLocaleString() + ' 숲';
+
+        document.getElementById('saveBtn').disabled = false;
+    }
+
+    // ─── 릴 저장 ──────────────────────────────────────────
+    function saveRound() {
+        if (!currentCalc) return;
+        rounds.push({ ...currentCalc });
+        save();
+        renderList();
+        renderTotal();
+        document.getElementById('saveBtn').disabled = true;
+        currentCalc = null;
+
+        // 저장 피드백
+        const btn = document.getElementById('saveBtn');
+        const orig = btn.textContent;
+        btn.textContent = '✅ 저장완료!';
+        setTimeout(() => { btn.textContent = orig; }, 1200);
+    }
+
+    // ─── 회차 삭제 ──────────────────────────────────────────
+    function deleteRound(idx) {
+        if (!confirm(`${idx+1}릴을 삭제하시겠습니까?`)) return;
+        rounds.splice(idx, 1);
+        save();
+        renderList();
+        renderTotal();
+    }
+
+    // ─── 전체 초기화 ────────────────────────────────────────
+    function clearAll() {
+        if (!rounds.length) return;
+        if (!confirm('모든 릴 데이터를 초기화하시겠습니까?')) return;
+        rounds = [];
+        save();
+        renderList();
+        renderTotal();
+    }
+
+    // ─── 목록 렌더 ──────────────────────────────────────────
+    function renderList() {
+        const el = document.getElementById('roundList');
+        if (!rounds.length) {
+            el.innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🫧</div>
+                    아직 저장된 릴이 없습니다.<br>계산 후 [릴 저장]을 눌러 추가하세요.
+                </div>`;
+            return;
+        }
+        el.innerHTML = rounds.map((r, i) => `
+            <div class="round-item">
+                <div class="round-badge">${i+1}</div>
+                <div class="round-info">
+                    <div class="round-meta">
+                        1관 ${r.c1}회 · 2관 ${r.c2}회 · 3관 ${r.c3}회 &nbsp;|&nbsp;
+                        개당 ${r.price.toLocaleString()}숲 &nbsp;|&nbsp; ${r.members}명
+                    </div>
+                    <div class="round-totals">
+                        구슬 ${r.totalCount}개 → 합계 ${r.totalPrice.toLocaleString()}숲
+                        &nbsp;/ 1인당 <span>${r.perPerson.toLocaleString()}숲</span>
+                    </div>
+                </div>
+                <button class="round-del" onclick="deleteRound(${i})" title="삭제">✕</button>
+            </div>
+        `).join('');
+    }
+
+    // ─── 총 정산 렌더 ───────────────────────────────────────
+    function renderTotal() {
+        const n = rounds.length;
+        const totalBeads  = rounds.reduce((s, r) => s + r.totalCount, 0);
+        const totalMoney  = rounds.reduce((s, r) => s + r.totalPrice, 0);
+        // 파티원 수: 가장 최근 릴 기준
+        const members = n > 0 ? rounds[rounds.length-1].members : 0;
+        const perPerson = members > 0 ? totalMoney / members : 0;
+
+        document.getElementById('t_rounds').textContent  = n;
+        document.getElementById('t_beads').textContent   = totalBeads.toLocaleString();
+        document.getElementById('t_total').textContent   = totalMoney.toLocaleString();
+        document.getElementById('t_members').textContent = members || '?';
+        document.getElementById('t_perPerson').innerHTML =
+            perPerson.toLocaleString() + '<span class="unit">숲</span>';
+    }
+
+    // ─── 초기 렌더 ──────────────────────────────────────────
+    renderList();
+    renderTotal();
+</script>
+</body>
+</html>
